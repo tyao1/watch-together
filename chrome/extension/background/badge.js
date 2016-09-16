@@ -1,3 +1,4 @@
+/*
 chrome.storage.local.get('todos', (obj) => {
   let todos = obj.todos;
   if (todos) {
@@ -11,3 +12,4 @@ chrome.storage.local.get('todos', (obj) => {
     chrome.browserAction.setBadgeText({ text: '1' });
   }
 });
+*/

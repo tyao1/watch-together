@@ -1,95 +1,208 @@
 import React, { Component, PropTypes } from 'react';
+import waitUntilVariant from '../utils/waitUntilVariant';
+import { connect } from 'react-redux';
+import { init, userDo } from '../actions/player';
 
-export default class Root extends Component {
+// don't sync these actions
+const blacklist = [
+  'setting_config'
+]
+
+@connect(
+  state => {
+    const currentAv = state.players.currentAv;
+    // console.log('actions:', state.players[currentAv]);
+
+    return {
+      currentAv,
+      meId: state.players.meId,
+      actions: state.players[currentAv],
+      mode: state.players.mode,
+    }
+  },
+  { init, userDo }
+)
+export default class Player extends Component {
 
   async componentDidMount() {
+    if (window.playerWT) return; // avoid multiple patch in hot reloading
+
+    // console.log('mount');
     // hook into the h5 player
-    // console.log(window);
-    // start load html5 player
-    // window.GrayManager.gray_loader_html5();
-    const result = await new Promise((resolve, reject) => {
-      window.$.ajax({
-        url: 'http://static.hdslb.com/player/js/bilibiliPlayer.min.js?v=' + window.GrayManager.gray_config_html5.version,
-        cache: !0,
-        type: 'get',
-        dataType: 'script',
-        success: () => {
-          resolve(true);
-        },
-        failure: () => {
-          reject();
-        }
+    if (!window.bilibiliPlayer) {
+      // Html5 player is not loaded, load it mannually
+      // console.log('start load');
+      if (! await waitUntilVariant(() => window.$ !== undefined)) {
+        alert('[WT] 😃加载播放器失败，请检查网络并刷新页面重试');
+        return;
+      }
+      const result = await new Promise((resolve, reject) => {
+        window.$.ajax({
+          url: 'http://static.hdslb.com/player/js/bilibiliPlayer.min.js?v=' + window.GrayManager.gray_config_html5.version,
+          cache: !0,
+          type: 'get',
+          dataType: 'script',
+          success: () => {
+            resolve(true);
+          },
+          failure: () => {
+            reject();
+          }
+        });
       });
-    });
-    if (!result) alert('[WT] 加载播放器失败，请检查网络并刷新页面重试');
+      if (!result) alert('[WT] 加载播放器失败，请检查网络并刷新页面重试');
+    }
+
+    // inject our instance of player
     const a = window.GrayManager.update_params(!0);
+
+    console.log('vidoeData', a);
+    this.props.init(a, this.props.mode);
+
     a.p = window.pageno;
     $("#bofqi").html('<div class="player"><div id="bilibiliPlayer"></div></div><iframe style="display: none"></iframe>');
 
+    // hook into the functions
     const { bilibiliPlayer } = window;
     const biliProto = {...bilibiliPlayer.prototype};
 
-    bilibiliPlayer.prototype.play = function() {
-      console.log('play', arguments);
-      biliProto.play.apply(this, arguments);
-    }
+    const dis = this;
 
-    bilibiliPlayer.prototype.pause = function() {
-      console.log('pause', arguments);
-      biliProto.pause.apply(this, arguments);
-    }
-
-    bilibiliPlayer.prototype.seek = function() {
-      console.log('pseeklay', arguments);
-      biliProto.seek.apply(this, arguments);
-    }
-
-    bilibiliPlayer.prototype.volumn = function() {
-      console.log('volumn', arguments);
-      biliProto.volumn.apply(this, arguments);
-    }
-    bilibiliPlayer.prototype.volume = function() {
-      console.log('volume', arguments);
-      biliProto.volume.apply(this, arguments);
-    }
-    bilibiliPlayer.prototype.volume = function() {
-      console.log('volume', arguments);
-      biliProto.volume.apply(this, arguments);
-    }
-    bilibiliPlayer.prototype.set = function() {
-      console.log('set', arguments);
-      biliProto.set.apply(this, arguments);
-    }
-
-    /*
-    const handler = {
-      get: (target, name) => {
-        if (name in target) {
-          const func = target[name];
-          if (typeof func === 'function') {
-            const patched = function () {
-              console.log(name, arguments);
-              func.apply(this, arguments);
-            };
-            return patched;
-          }
+    function patchFunc(name) {
+      bilibiliPlayer.prototype[name] = function() {
+        if (!dis.playerRef) {
+          console.log('our this', this);
+          window.playerRef = dis.playerRef = this;
         }
-        return target[name];
-      },
-    };
-    const proxiedProto = new Proxy(biliProto, handler);
+        dis.props.userDo({
+          func: name,
+          args: Array.prototype.slice.call(arguments),
+          av: dis.props.currentAv,
+          meId: dis.props.meId,
+          current: dis.playerRef.currentTime(), // current play time
+        });
+        return biliProto[name].apply(this, arguments);
+      }
+      // the original function to be called
+      bilibiliPlayer.prototype[name + 'WT'] = biliProto[name];
+    }
+    const patchList = [
+      /*
+      "constructor", "play", "pause", "N",
+       "seek", "pg", "volume", "uk", "Si", "Dn",
+         "po", "load", "uj", "vj", "Wq", "nh",
+          "Xb", "get", "set", "Wa", "next",
+           "Ua", "X", "resize", "mode",
+      */
+      'play', 'pause', 'seek', 'volume', // 'nh',
+      //'Dn', 'N', 'Si',
+    ];
+    if (!this.props.mode) {
+      // if we are the guest we need to follow
+      bilibiliPlayer.prototype.nh = function() {
+        biliProto.nh.apply(this, arguments);
+        dis.followTheHost();
+      }
+    }
 
-
-    bilibiliPlayer.prototype = biliProto;
-    */
-    window.player = new bilibiliPlayer(a);
+    bilibiliPlayer.prototype.set = function() {
+      // get set actions but don't dispatch
+      console.log('set', arguments);
+      if (arguments[0] === 'video_status'){
+        if (arguments[1] === 'volume') {
+          if (dis._lastVol === arguments[2]) return;
+          dis.props.userDo({
+            func: 'volume',
+            args: [arguments[2]],
+            av: dis.props.currentAv,
+            meId: dis.props.meId,
+          });
+          dis._lastVol = arguments[2];
+        }
+      }
+      // return biliProto.set.apply(this, arguments);
+    }
+    patchList.forEach(patchFunc);
+    // patchFunc('set');
+    window.playerWT = new bilibiliPlayer(a);
 
     console.info('[WT] HTML PLAYER LOADED');
+    this.loaded = true;
+    // window.bilibiliPlayer.prototype['play'].apply(this.playerRef);
+  }
+
+  componentWillReceiveProps(nextProps) {
+    if (nextProps.actions) {
+      // wait until we have playerRef
+      if (!this.loaded || !this.playerRef) return;
+      if (!nextProps.mode && !this.actionHasInited) return;
+      // new actions in coming
+      const keys = Object.keys(nextProps.actions);
+      const lastAction = keys[keys.length - 1];
+      if (lastAction === this.lastAction) return;
+      this.lastAction = lastAction;
+      const action = nextProps.actions[lastAction];
+      this.doAction(action);
+    }
+  }
+
+
+  followTheHost = () => {
+    if (!this.actionHasInited) {
+      console.log('is it ok to init ?');
+
+      // first time running, sync with the host
+      // we need to find the last play or seek to locate the player
+      const keys = Object.keys(this.props.actions);
+
+      for (let id = keys.length - 1; id >= 0; id--) {
+        const action = this.props.actions[keys[id]];
+        if (!action) continue;
+        this.doAction(action);
+        if (['play', 'pause', 'seek'].indexOf(action.func) > -1) {
+          console.log('initialize complete');
+          break;
+        }
+      }
+
+      this.actionHasInited = true;
+      return;
+    }
+  }
+
+  doAction = (action) => {
+    console.log(action);
+
+    if (action.meId === this.props.meId) return;
+    if (action.func === 'play') {
+      const time = action.current;
+      const myCurrent = this.playerRef.currentTime();
+      const timeDiff = Date.now() - action.date;
+      if (timeDiff > 5) {
+        // our time is not in sync, we need to sync
+        const realTime = timeDiff / 990 + time;
+        this.playerRef.seekWT(realTime);
+        console.log('moded play', time, realTime);
+        return;
+      }
+    } else if (action.func === 'seek') {
+      const jumpTo = action.args[0];
+      const timeDiff = Date.now() - action.date;
+      if (timeDiff > 5) {
+        // too much time spent in transfer
+        const realTime = timeDiff / 1000 + jumpTo;
+        this.playerRef.seekWT(realTime);
+        console.log('moded seek', jumpTo, realTime);
+
+        return;
+      }
+    }
+    window.bilibiliPlayer.prototype[action.func + 'WT'].apply(this.playerRef, action.args);
   }
 
   render() {
     return (
-      <div><p>PLAYER WILL BE HERE</p></div>
+      <div><p style={{textAlign: 'center', margin: 3, color: '#a3a3a3'}}>工作中</p></div>
     )
   }
 }

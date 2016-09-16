@@ -1,0 +1,28 @@
+.room {
+  width: 30%;
+  background-color: #fcfcfc;
+  border-radius: 4px;
+  display: inline-block;
+  text-decoration: none;
+  padding: 0;
+  margin: 12px;
+  p {
+    color: #5a5a5a;
+    height: 40px;
+    line-height: 40px;
+    text-align: center;
+    font-size: 14px;
+    vertical-align: middle;
+    letter-spacing: 2px;
+  }
+}
+
+.mode {
+  text-align: center;
+  margin: 0;
+  .switch {
+    margin-left: 6px;
+    text-decoration-style: solid;
+    color: #ccc;
+  }
+}

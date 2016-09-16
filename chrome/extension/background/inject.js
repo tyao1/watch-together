@@ -43,6 +43,7 @@ function loadScript(name, tabId, cb) {
       }
     };
 
+    /*
     const bilibiliPlayer = chrome.extension.getURL('/bilibiliPlayer.min.js');
     chrome.tabs.executeScript(tabId, {
       code: `var th = document.getElementsByTagName('body')[0];
@@ -54,7 +55,8 @@ function loadScript(name, tabId, cb) {
   `,
       runAt: 'document_end'
     });
-
+    */
+  
     chrome.tabs.executeScript(tabId, {
       code: `var th = document.getElementsByTagName('body')[0];
     var s = document.createElement('script');
