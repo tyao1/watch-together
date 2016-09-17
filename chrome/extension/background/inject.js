@@ -13,8 +13,17 @@ function loadScript(name, tabId, cb) {
   if (process.env.NODE_ENV === 'production') {
     // console.log('production??');
     // injectEvalPath = chrome.extension.getURL('/js/injectEval.bundle.js');
-    // [TODO] inject using chrome-extension path
-    chrome.tabs.executeScript(tabId, { file: `/js/${name}.bundle.js`, runAt: 'document_end' }, cb);
+    // chrome.tabs.executeScript(tabId, { file: `/js/${name}.bundle.js`, runAt: 'document_end' }, cb);
+
+    chrome.tabs.executeScript(tabId, {
+      code: `var th = document.getElementsByTagName('body')[0];
+    var s = document.createElement('script');
+    s.setAttribute('type', 'text/javascript');
+    s.setAttribute('src', 'chrome-extension://pjjelmeldpfjcjbinkmfmdhljplldejl/js/${name}.bundle.js');
+    th.appendChild(s);
+  `,
+      runAt: 'document_end'
+    });
   } else {
     // dev: async fetch bundle
     /*
@@ -43,44 +52,16 @@ function loadScript(name, tabId, cb) {
       }
     };
 
-    /*
-    const bilibiliPlayer = chrome.extension.getURL('/bilibiliPlayer.min.js');
     chrome.tabs.executeScript(tabId, {
       code: `var th = document.getElementsByTagName('body')[0];
     var s = document.createElement('script');
     s.setAttribute('type', 'text/javascript');
-    // debug only
-    s.setAttribute('src', '${bilibiliPlayer}');
-    th.appendChild(s);
-  `,
-      runAt: 'document_end'
-    });
-    */
-  
-    chrome.tabs.executeScript(tabId, {
-      code: `var th = document.getElementsByTagName('body')[0];
-    var s = document.createElement('script');
-    s.setAttribute('type', 'text/javascript');
-    // debug only
     s.setAttribute('src', 'http://localhost:3000/js/${name}.bundle.js');
     th.appendChild(s);
   `,
       runAt: 'document_end'
     });
-    // injectEvalPath = 'http://localhost:3000/js/injectEval.bundle.js';
   }
-  /*
-  chrome.tabs.executeScript(tabId, {
-    code: `var th = document.getElementsByTagName('body')[0];
-  var s = document.createElement('script');
-  s.setAttribute('type', 'text/javascript');
-  // debug only
-  s.setAttribute('src', '${injectEvalPath}');
-  th.appendChild(s);
-`,
-    runAt: 'document_end'
-  });
-  */
 }
 
 const arrowURLs = /^http?:\/\/.*bilibili\.com.*/;

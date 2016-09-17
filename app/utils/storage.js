@@ -2,6 +2,7 @@ function saveState(state) {
   chrome.storage.local.set({ state: JSON.stringify(state) });
 }
 
+/*
 // todos unmarked count
 function setBadge(todos) {
   if (chrome.browserAction) {
@@ -10,6 +11,7 @@ function setBadge(todos) {
     chrome.browserAction.setBadgeText({ text: count > 0 ? count.toString() : '' });
   }
 }
+*/
 
 export default function () {
   return next => (reducer, initialState) => {
@@ -17,7 +19,7 @@ export default function () {
     store.subscribe(() => {
       const state = store.getState();
       saveState(state);
-      setBadge(state.todos);
+      // setBadge(state.todos);
     });
     return store;
   };

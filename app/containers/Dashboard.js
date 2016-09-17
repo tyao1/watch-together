@@ -39,7 +39,7 @@ export default class Player extends Component {
     if (this.props.rooms) {
       const keys = Object.keys(this.props.rooms);
       if (keys.length) {
-        return (<ul>
+        return (<ul className={styles.roomContainer}>
           {
             keys.map(key => {
               return (<a

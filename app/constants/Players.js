@@ -7,3 +7,4 @@ export const CHANGE_MODE = 'player/CHANGE_MODE';
 export const ON_CHANGE = 'player/ON_CHANGE';
 export const ON_ROOM = 'player/ON_ROOM';
 export const INIT_ID = 'player/INIT_ID';
+export const EXIT_PLAYER = 'player/EXIT_PLAYER';

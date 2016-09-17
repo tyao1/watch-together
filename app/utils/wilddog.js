@@ -17,6 +17,7 @@ export default class Wild {
       data: meId,
     });
 
+    // this.meId = meId;
 
     // base of our server
     this.base = wilddog.sync().ref();
@@ -27,6 +28,7 @@ export default class Wild {
     // room list
     this.roomRef = this.base.child('ROOMS');
 
+    // update rooms data
     this.roomRef.on('value', (snapshot) => {
       console.log('AVAILABLE ROOMS', snapshot.val());
       const data = snapshot.val();
@@ -39,31 +41,55 @@ export default class Wild {
         data,
       });
     });
+
+    // refs for rooms
     this.refs = {};
+
+    this._rooms = {};
+    this._dataRefs = new Map();
 
     // imparitve actions
     this.actionsMap = {
 
       [types.INIT_PLAYER]: (action) => {
-        const ref = this.getRef(action.data.aid);
+        // lets go online
+        // wilddog.goOnline();
 
+        const ref = this.getRef(action.data.aid);
+        this._dataRefs.set(action.data.aid, ref);
         if (action.owner) {
           // room owner, own the room data
           console.log('is owner');
           ref.set({}); // clearData
-          this.roomRef.update({
-            [action.data.aid]: true
-          });
+
+          const theRoom = this.roomRef.child(action.data.aid);
+          theRoom.once('value', (data) => {
+            const val = data.val();
+            console.log('once data', data.val());
+            if (!val) {
+              theRoom.set(1);
+            } else {
+              theRoom.set(val + 1);
+            }
+          })
+
+          console.log('broken?');
         }
-        // limitToLast
-        ref.orderByKey().on('value', (snapshot) => {
+        function syncAction(snapshot) {
           const data = snapshot.val();
+          console.log('got action', data);
           dispatch({
             type: types.ON_CHANGE,
             key: action.data.aid,
             data,
           });
-        });
+        }
+        this._rooms[action.data.aid] = syncAction;
+        console.log('query', this._rooms[action.data.aid]);
+        // limitToLast
+        ref.on('value', syncAction);
+
+        console.log('works?');
       },
       [types.DO]: (action) => {
         const ref = this.getRef(action.data.av);
@@ -71,9 +97,28 @@ export default class Wild {
         action.data.date = Date.now();
         ref.push(action.data);
       },
+      [types.EXIT_PLAYER]: (action) => {
+        console.log('exit player!!!', action);
+        const ref = this._dataRefs.get(action.data);
+        if (!ref) return;
+        // delete count
+        const currentRoom = this.roomRef.child(action.data)
+        currentRoom.once('value', (data) => {
+          const val = data.val();
+          console.log('once data', data.val());
+          if (val > 1) {
+            currentRoom.set(val - 1);
+          } else {
+            currentRoom.remove();
+          }
+        });
+        console.log('does this off works?');
+        ref.off('value', this._rooms[action.data]);
+        delete this._rooms[action.data];
+        this._dataRefs.delete(action.data);
+      },
     };
   }
-
 
   getRef = (key) => {
     if (!this.refs[key]) {

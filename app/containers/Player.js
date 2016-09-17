@@ -1,7 +1,7 @@
 import React, { Component, PropTypes } from 'react';
 import waitUntilVariant from '../utils/waitUntilVariant';
 import { connect } from 'react-redux';
-import { init, userDo } from '../actions/player';
+import { init, userDo, exitPlayer } from '../actions/player';
 
 // don't sync these actions
 const blacklist = [
@@ -20,7 +20,7 @@ const blacklist = [
       mode: state.players.mode,
     }
   },
-  { init, userDo }
+  { init, userDo, exitPlayer }
 )
 export default class Player extends Component {
 
@@ -51,29 +51,38 @@ export default class Player extends Component {
         });
       });
       if (!result) alert('[WT] 加载播放器失败，请检查网络并刷新页面重试');
+      // inject our instance of player
+      const a = window.GrayManager.update_params(!0);
+
+      console.log('vidoeData', a);
+      this.props.init(a, this.props.mode);
+
+      a.p = window.pageno;
+      $("#bofqi").html('<div class="player"><div id="bilibiliPlayer"></div></div><iframe style="display: none"></iframe>');
+
+      window.playerWT = new window.bilibiliPlayer(a);
+
+    } else {
+      // init video data
+      const a = window.GrayManager.update_params(!0);
+      console.log('vidoeData', a);
+      this.props.init(a, this.props.mode);
     }
 
-    // inject our instance of player
-    const a = window.GrayManager.update_params(!0);
-
-    console.log('vidoeData', a);
-    this.props.init(a, this.props.mode);
-
-    a.p = window.pageno;
-    $("#bofqi").html('<div class="player"><div id="bilibiliPlayer"></div></div><iframe style="display: none"></iframe>');
-
-    // hook into the functions
+    /*
+      Patch the player and
+      hook into the functions
+    */
     const { bilibiliPlayer } = window;
     const biliProto = {...bilibiliPlayer.prototype};
-
     const dis = this;
 
     function patchFunc(name) {
       bilibiliPlayer.prototype[name] = function() {
-        if (!dis.playerRef) {
-          console.log('our this', this);
-          window.playerRef = dis.playerRef = this;
-        }
+        //if (!dis.playerRef) {
+        //  console.log('our this', this);
+        dis.playerRef = this;
+        // }
         dis.props.userDo({
           func: name,
           args: Array.prototype.slice.call(arguments),
@@ -87,15 +96,7 @@ export default class Player extends Component {
       bilibiliPlayer.prototype[name + 'WT'] = biliProto[name];
     }
     const patchList = [
-      /*
-      "constructor", "play", "pause", "N",
-       "seek", "pg", "volume", "uk", "Si", "Dn",
-         "po", "load", "uj", "vj", "Wq", "nh",
-          "Xb", "get", "set", "Wa", "next",
-           "Ua", "X", "resize", "mode",
-      */
       'play', 'pause', 'seek', 'volume', // 'nh',
-      //'Dn', 'N', 'Si',
     ];
     if (!this.props.mode) {
       // if we are the guest we need to follow
@@ -122,13 +123,13 @@ export default class Player extends Component {
       }
       // return biliProto.set.apply(this, arguments);
     }
+
     patchList.forEach(patchFunc);
     // patchFunc('set');
-    window.playerWT = new bilibiliPlayer(a);
 
     console.info('[WT] HTML PLAYER LOADED');
     this.loaded = true;
-    // window.bilibiliPlayer.prototype['play'].apply(this.playerRef);
+    window.addEventListener('unload', this.onUnload);
   }
 
   componentWillReceiveProps(nextProps) {
@@ -146,6 +147,15 @@ export default class Player extends Component {
     }
   }
 
+  componentWillUnmount() {
+    this.onUnload();
+    window.removeEventListener('unload', this.onUnload);
+  }
+
+  onUnload = () => {
+    // player is unloaded
+    this.props.exitPlayer(this.props.currentAv);
+  }
 
   followTheHost = () => {
     if (!this.actionHasInited) {
@@ -177,25 +187,24 @@ export default class Player extends Component {
     if (action.func === 'play') {
       const time = action.current;
       const myCurrent = this.playerRef.currentTime();
-      const timeDiff = Date.now() - action.date;
-      if (timeDiff > 5) {
+      const timeDiff = (Date.now() - action.date) / 990;
+      // if (timeDiff > 0.005) {
         // our time is not in sync, we need to sync
-        const realTime = timeDiff / 990 + time;
+        const realTime = timeDiff + time;
         this.playerRef.seekWT(realTime);
         console.log('moded play', time, realTime);
         return;
-      }
+      // }
     } else if (action.func === 'seek') {
       const jumpTo = action.args[0];
-      const timeDiff = Date.now() - action.date;
-      if (timeDiff > 5) {
+      const timeDiff = (Date.now() - action.date) / 990;
+      // if (timeDiff > 5) {
         // too much time spent in transfer
-        const realTime = timeDiff / 1000 + jumpTo;
+        const realTime = timeDiff + jumpTo;
         this.playerRef.seekWT(realTime);
         console.log('moded seek', jumpTo, realTime);
-
         return;
-      }
+      // }
     }
     window.bilibiliPlayer.prototype[action.func + 'WT'].apply(this.playerRef, action.args);
   }

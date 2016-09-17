@@ -11,6 +11,7 @@ import Dashboard from '../containers/Dashboard';
 
 import {APP_ID} from '../config';
 
+/*
 @connect(
   state => ({
     todos: state.todos
@@ -19,11 +20,12 @@ import {APP_ID} from '../config';
     actions: bindActionCreators(TodoActions, dispatch)
   })
 )
+*/
 export default class App extends Component {
 
   static propTypes = {
-    todos: PropTypes.array.isRequired,
-    actions: PropTypes.object.isRequired
+    // todos: PropTypes.array.isRequired,
+    // actions: PropTypes.object.isRequired
   };
 
   locationToComponent = () => {
@@ -40,12 +42,12 @@ export default class App extends Component {
   }
 
   render() {
-    const { todos, actions } = this.props;
+    // const { todos, actions } = this.props;
     const Comp = this.locationToComponent();
     return (
       <div className={style.normal + (this.isStandalone ? ' ' + style.standalone : '')}>
-        <Header addTodo={actions.addTodo} />
-        <Comp todos={todos} actions={actions} />
+        <Header />
+        <Comp />
         {/* <MainSection todos={todos} actions={actions} /> */}
       </div>
     );

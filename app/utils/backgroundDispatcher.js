@@ -14,6 +14,7 @@ export default function createBackgroundEnhancer(portIdentifier, globalKey = 'gl
   return createStore => (reducer, initialState) => {
     const store = createStore(reducer, initialState);
     const ports = new Map();
+    const portsToAv = new Map();
 
     function dispatchAll(action) {
       store.dispatch(action);
@@ -34,7 +35,10 @@ export default function createBackgroundEnhancer(portIdentifier, globalKey = 'gl
         sendResponse(store.getState());
         return;
       }
-
+      if (!request.payload) {
+        console.warn('no payload', request);
+        return;
+      }
       if (request.payload.wild) {
         // it's wilddog action sync it to the server
 
@@ -60,7 +64,6 @@ export default function createBackgroundEnhancer(portIdentifier, globalKey = 'gl
       }
       const { name } = port;
       ports.set(name, port);
-
       port.onDisconnect.addListener((() => {
         ports.delete(name);
       }));

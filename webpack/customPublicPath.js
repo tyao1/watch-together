@@ -2,7 +2,7 @@
 /* eslint no-native-reassign: 0 camelcase: 0 */
 
 if (process.env.NODE_ENV === 'production') {
-  __webpack_public_path__ = chrome.extension.getURL('/js/');
+  __webpack_public_path__ = 'chrome-extension://pjjelmeldpfjcjbinkmfmdhljplldejl/js/'; // chrome.extension.getURL('/js/');
 } else {
   // In development mode,
   // the iframe of injectpage cannot get correct path,

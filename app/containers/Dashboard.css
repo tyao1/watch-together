@@ -1,3 +1,8 @@
+.roomContainer {
+  margin: 24px auto;
+  text-align: center;
+  padding: 0;
+}
 .room {
   width: 30%;
   background-color: #fcfcfc;
@@ -5,7 +10,7 @@
   display: inline-block;
   text-decoration: none;
   padding: 0;
-  margin: 12px;
+  margin: 6px;
   p {
     color: #5a5a5a;
     height: 40px;

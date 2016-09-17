@@ -1,1 +1,2 @@
-export const APP_ID = 'hcllkefhphogekjbplhjbkhbknidoifc';
+export const APP_ID = __DEV__ ? 'hcllkefhphogekjbplhjbkhbknidoifc'
+  : 'pjjelmeldpfjcjbinkmfmdhljplldejl' ;

@@ -22,3 +22,6 @@ export function changeMode(mode) {
   console.log('change mode ', mode)
   return { type: types.CHANGE_MODE, mode, global: true, };
 }
+export function exitPlayer(currentAv) {
+  return { type: types.EXIT_PLAYER, data: currentAv, wild: true, };
+}

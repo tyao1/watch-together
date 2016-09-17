@@ -23,11 +23,28 @@ module.exports = {
     new webpack.optimize.DedupePlugin(),
     new webpack.optimize.UglifyJsPlugin({
       comments: false,
-      compressor: {
-        warnings: false
+      compress: {
+        screw_ie8: true, // React doesn't support IE8
+        warnings: false,
+        sequences: true,
+        dead_code: true,
+        conditionals: true,
+        booleans: true,
+        unused: true,
+        if_return: true,
+        join_vars: true,
+        drop_console: true,
+      },
+      mangle: {
+        screw_ie8: true
+      },
+      output: {
+        comments: false,
+        screw_ie8: true
       }
     }),
     new webpack.DefinePlugin({
+      __DEV__: false,
       'process.env': {
         NODE_ENV: JSON.stringify('production')
       }
